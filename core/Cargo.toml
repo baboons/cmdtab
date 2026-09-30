@@ -1,0 +1,20 @@
+[package]
+name = "cmdtab-core"
+version = "0.1.0"
+edition = "2024"
+description = "Search, ranking and learning engine for CmdTab"
+publish = false
+
+[lib]
+name = "cmdtab_core"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = false
+strip = "debuginfo"

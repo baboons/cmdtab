@@ -1,0 +1,5 @@
+module CCmdTabCore [system] {
+    header "../../core/include/cmdtab_core.h"
+    link "cmdtab_core"
+    export *
+}
