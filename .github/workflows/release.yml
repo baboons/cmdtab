@@ -31,7 +31,6 @@ jobs:
     runs-on: macos-26
     env:
       ZIP: build/CmdTab-aarch64-apple-darwin.zip
-      KEYCHAIN: ${{ runner.temp }}/signing.keychain-db
     steps:
       - uses: actions/checkout@v5
 
@@ -62,6 +61,8 @@ jobs:
             echo "::error::CMDTAB_SIGNING_P12 isn't set. Unsigned builds would break updates and Accessibility for installed users."
             exit 1
           fi
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          echo "KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
           password="$(uuidgen)"
           echo "$CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/signing.p12"
           security create-keychain -p "$password" "$KEYCHAIN"
@@ -69,7 +70,9 @@ jobs:
           security unlock-keychain -p "$password" "$KEYCHAIN"
           security import "$RUNNER_TEMP/signing.p12" -k "$KEYCHAIN" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$KEYCHAIN" > /dev/null
-          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          existing=()
+          while IFS= read -r keychain; do existing+=("$(echo "$keychain" | xargs)"); done < <(security list-keychains -d user)
+          security list-keychains -d user -s "$KEYCHAIN" "${existing[@]}"
           rm "$RUNNER_TEMP/signing.p12"
 
       - name: Build, sign and zip
@@ -121,4 +124,4 @@ jobs:
 
       - name: Remove the signing keychain
         if: always()
-        run: security delete-keychain "$KEYCHAIN" 2>/dev/null || true
+        run: '[ -z "$KEYCHAIN" ] || security delete-keychain "$KEYCHAIN" 2>/dev/null || true'
