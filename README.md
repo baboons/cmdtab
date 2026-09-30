@@ -35,12 +35,14 @@ xattr -dr com.apple.quarantine /Applications/CmdTab.app
 **Press ⌘Tab.** The switcher opens showing every window, with your previous window selected.
 
 - **Type** to filter by app name and window title. The best match is selected.
-- **Tab / ⇧Tab / arrows** move the selection.
-- **↩** switches to the selected window. **esc** clears the search, or cancels. Clicking outside also closes it.
-- **Release ⌘** after moving the selection with Tab or the arrows, and you switch straight to that window. That's the
+- **Tab / ⇧Tab / arrows** move the selection, and so do **⌃N / ⌃P** (next / previous), as in any Mac list.
+- **↩** switches to the selected window. So does **⌘A**, once you've let go of ⌘ (or if your switcher
+  shortcut isn't ⌘Tab); while you're holding ⌘, A just types an "a". **esc** clears the search, or cancels. Clicking outside also closes it.
+- **Release ⌘** after moving the selection with Tab, the arrows or ⌃N / ⌃P, and you switch straight to that window. That's the
   classic "hold ⌘, Tab Tab, release" flow. If you only opened it or typed, releasing ⌘ leaves the switcher open
   so you can keep searching.
-- **A quick ⌘Tab tap** flips back to your previous window without showing any UI.
+- **A quick ⌘Tab tap** flips back to your previous window. Anything you release within about 0.3 s without
+  pressing another key counts as a tap. A very quick tap doesn't even show the switcher.
 
 Window actions work on the selected window. While ⌘ is held, add ⇧: `⇧W` close · `⇧M` minimize · `⇧H` hide app ·
 `⇧Q` quit app · `⇧F` full screen. Once you've let go of ⌘, use `⌘W`, `⌘M`, `⌘H`, `⌘Q`, `⌘F` instead.

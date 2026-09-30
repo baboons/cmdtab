@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import os
 
 enum KeyCode {
     static let tab = UInt16(kVK_Tab)
@@ -17,6 +18,18 @@ enum KeyCode {
     static let end = UInt16(kVK_End)
     static let pageUp = UInt16(kVK_PageUp)
     static let pageDown = UInt16(kVK_PageDown)
+
+    /// ⌃N / ⌃P step to the next / previous item, as in any Cocoa list or text
+    /// field. `chord` is the modifiers pressed for this key, without a trigger
+    /// modifier that's merely being held.
+    static func step(for code: UInt16, chord: CGEventFlags) -> Int? {
+        guard chord.contains(.maskControl) else { return nil }
+        switch KeyTranslator.shared.character(for: code, shift: false)?.lowercased() {
+        case "n": return 1
+        case "p": return -1
+        default: return nil
+        }
+    }
 
     static func name(for code: UInt16) -> String {
         switch Int(code) {
@@ -49,11 +62,19 @@ enum KeyCode {
 /// Maps virtual key codes to characters using the user's current keyboard
 /// layout, ignoring modifiers. Typing "å" on a Swedish layout while holding ⌘
 /// therefore searches for "å", not whatever ⌘/⌥ would produce.
-final class KeyTranslator {
+///
+/// Safe to call from any thread. The layout itself is only read on the main
+/// thread (Text Input Sources require it), so touch `shared` there first.
+final class KeyTranslator: @unchecked Sendable {
     static let shared = KeyTranslator()
 
-    private var layoutData: Data?
-    private var cache: [UInt32: String] = [:]
+    private struct Layout {
+        var data: Data?
+        var keyboardType: UInt32 = 0
+        var cache: [UInt32: String] = [:]
+    }
+
+    private let layout = OSAllocatedUnfairLock(initialState: Layout())
 
     private init() {
         reload()
@@ -64,20 +85,21 @@ final class KeyTranslator {
     }
 
     private func reload() {
-        cache.removeAll()
-        layoutData = nil
+        var fresh = Layout(keyboardType: UInt32(LMGetKbdType()))
         for source in [TISCopyCurrentKeyboardLayoutInputSource(), TISCopyCurrentASCIICapableKeyboardLayoutInputSource()] {
             guard let source = source?.takeRetainedValue(),
                   let ptr = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { continue }
-            layoutData = Unmanaged<CFData>.fromOpaque(ptr).takeUnretainedValue() as Data
-            return
+            fresh.data = Unmanaged<CFData>.fromOpaque(ptr).takeUnretainedValue() as Data
+            break
         }
+        layout.withLock { [fresh] in $0 = fresh }
     }
 
     func character(for keyCode: UInt16, shift: Bool) -> String? {
         let cacheKey = UInt32(keyCode) | (shift ? 0x10000 : 0)
-        if let hit = cache[cacheKey] { return hit.isEmpty ? nil : hit }
-        guard let data = layoutData else { return nil }
+        let (hit, data, keyboardType) = layout.withLock { ($0.cache[cacheKey], $0.data, $0.keyboardType) }
+        if let hit { return hit.isEmpty ? nil : hit }
+        guard let data else { return nil }
         let result: String = data.withUnsafeBytes { raw in
             guard let layout = raw.bindMemory(to: UCKeyboardLayout.self).baseAddress else { return "" }
             var deadKeyState: UInt32 = 0
@@ -85,14 +107,15 @@ final class KeyTranslator {
             var chars = [UniChar](repeating: 0, count: 4)
             let modifiers: UInt32 = shift ? UInt32(shiftKey >> 8) & 0xFF : 0
             let status = UCKeyTranslate(
-                layout, keyCode, UInt16(kUCKeyActionDown), modifiers, UInt32(LMGetKbdType()),
+                layout, keyCode, UInt16(kUCKeyActionDown), modifiers, keyboardType,
                 OptionBits(kUCKeyTranslateNoDeadKeysMask), &deadKeyState, chars.count, &length, &chars
             )
             guard status == noErr, length > 0 else { return "" }
             return String(utf16CodeUnits: chars, count: length)
         }
         let printable = result.unicodeScalars.allSatisfy { !CharacterSet.controlCharacters.contains($0) } ? result : ""
-        cache[cacheKey] = printable
+        // Skip the cache if the layout changed while we were translating.
+        layout.withLock { if $0.data == data { $0.cache[cacheKey] = printable } }
         return printable.isEmpty ? nil : printable
     }
 }

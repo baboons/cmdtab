@@ -5,9 +5,10 @@ import AppKit
 ///
 /// Two ways in:
 /// - **Hold** (⌘Tab): Tab cycles, typing filters. Releasing ⌘ after picking with
-///   Tab/arrows switches; otherwise (in stay-open mode) the session turns sticky.
-///   A quick tap switches to the previous window without ever showing the UI.
-/// - **Sticky** (⌥⌘Tab by default): opens Spotlight-style; type, ↑↓, ↩ to switch.
+///   Tab/arrows/⌃N/⌃P switches; otherwise (in stay-open mode) the session turns
+///   sticky. A quick tap switches to the previous window.
+/// - **Sticky** (⌥⌘Tab by default): opens Spotlight-style; type, ↑↓ or ⌃N/⌃P,
+///   ↩ or ⌘A to switch.
 ///
 /// The keyboard tap owns the session state machine; this class follows its
 /// events and ignores any that belong to an older session.
@@ -63,7 +64,7 @@ final class SwitcherController: SwitcherViewDelegate {
         case let .release(session, staysOpen):
             guard isOpen, session == self.session, mode == .hold else { return }
             // The tap already decided: a quick tap or a window picked with
-            // Tab/arrows switches; otherwise the session continues as a search.
+            // Tab/arrows/⌃N/⌃P switches; otherwise the session continues as a search.
             if staysOpen {
                 mode = .sticky
                 if !isVisible { show() }
@@ -174,6 +175,9 @@ final class SwitcherController: SwitcherViewDelegate {
         let command = flags.contains(.maskCommand)
         let option = flags.contains(.maskAlternate)
         let control = flags.contains(.maskControl)
+        let trigger = Settings.shared.trigger
+        // Modifiers pressed for this key, without the trigger held since ⌘Tab.
+        let chord = mode == .hold ? flags.subtracting(trigger.flags) : flags
         let columns = layout?.style == .previews ? layout?.columns ?? 1 : 1
 
         switch code {
@@ -197,6 +201,11 @@ final class SwitcherController: SwitcherViewDelegate {
         case KeyCode.space:
             if !query.isEmpty, !query.hasSuffix(" ") { setQuery(query + " ") }
         default:
+            if let step = KeyCode.step(for: code, chord: chord) { return move(step) }
+            // ⌘A switches like ↩, unless ⌘ is the held trigger and A is just typing.
+            if chord.contains(.maskCommand), KeyTranslator.shared.character(for: code, shift: false)?.lowercased() == "a" {
+                return commit()
+            }
             // Window actions: ⇧+key while holding the trigger, ⌘+key in sticky mode.
             let actionModifier = mode == .hold ? shift : command
             if actionModifier, !isRepeat, let action = Self.action(for: code) {
@@ -204,7 +213,6 @@ final class SwitcherController: SwitcherViewDelegate {
                 return
             }
             // Held trigger modifiers are expected in hold mode; anything else is a shortcut, not text.
-            let trigger = Settings.shared.trigger
             let heldControl = control && !(mode == .hold && trigger == .control)
             if heldControl || (mode == .sticky && command) { return }
             guard let char = KeyTranslator.shared.character(for: code, shift: false),

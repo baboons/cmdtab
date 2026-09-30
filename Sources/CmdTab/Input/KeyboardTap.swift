@@ -25,7 +25,7 @@ final class KeyboardTap {
         var trigger: CGEventFlags = .maskCommand
         var searchCombo: KeyCombo?
         /// Releasing the trigger keeps the switcher open, unless the user
-        /// picked a window with Tab/arrows or released before it appeared.
+        /// picked a window with Tab/arrows/⌃N/⌃P or it was a quick tap.
         var stayOpenOnRelease = false
         /// How long hold mode waits before showing the panel.
         var appearDelay: TimeInterval = 0.09
@@ -39,7 +39,7 @@ final class KeyboardTap {
         var openedAt: CFAbsoluteTime = 0
         /// Any key since opening; the main thread shows the panel on the first key.
         var sawKey = false
-        /// Selection moved with Tab/arrows since the query last changed.
+        /// Selection moved with Tab/arrows/⌃N/⌃P since the query last changed.
         var picked = false
         var config = Config()
     }
@@ -62,6 +62,8 @@ final class KeyboardTap {
     /// Creates the tap. Fails without Accessibility permission.
     func start() -> Bool {
         guard tap == nil else { return true }
+        // Load the keyboard layout here on the main thread; the tap thread only translates.
+        _ = KeyTranslator.shared
         let mask: CGEventMask = (1 << CGEventType.keyDown.rawValue)
             | (1 << CGEventType.keyUp.rawValue)
             | (1 << CGEventType.flagsChanged.rawValue)
@@ -186,6 +188,11 @@ final class KeyboardTap {
 }
 
 private extension KeyboardTap.State {
+    /// Releasing the trigger this soon after ⌘Tab, with no other key, is a tap
+    /// that flips to the previous window, even if the panel already appeared.
+    /// Real taps often take 150-250 ms, well past the appear delay.
+    static let quickTap: CFTimeInterval = 0.3
+
     mutating func begin(mode: KeyboardTap.Mode, reverse: Bool) {
         session &+= 1
         active = true
@@ -198,8 +205,11 @@ private extension KeyboardTap.State {
     /// Tracks whether the current selection was deliberately picked.
     mutating func noteKey(_ code: UInt16, flags: CGEventFlags) {
         sawKey = true
+        let chord = mode == .hold ? flags.subtracting(config.trigger) : flags
         switch code {
         case KeyCode.tab, KeyCode.left, KeyCode.right, KeyCode.up, KeyCode.down, KeyCode.home, KeyCode.end:
+            picked = true
+        case _ where KeyCode.step(for: code, chord: chord) != nil:
             picked = true
         default:
             // ⇧+key is a window action in hold mode and leaves the selection alone;
@@ -212,8 +222,9 @@ private extension KeyboardTap.State {
     /// sticky, and returns the event describing what happened.
     mutating func releaseIfNeeded(flags: CGEventFlags) -> KeyboardTap.Event? {
         guard active, mode == .hold, !flags.contains(config.trigger) else { return nil }
-        let visible = sawKey || CFAbsoluteTimeGetCurrent() - openedAt >= config.appearDelay
-        let staysOpen = config.stayOpenOnRelease && visible && !picked
+        let held = CFAbsoluteTimeGetCurrent() - openedAt
+        let tap = !sawKey && held < max(config.appearDelay, Self.quickTap)
+        let staysOpen = config.stayOpenOnRelease && !tap && !picked
         if staysOpen { mode = .sticky } else { active = false }
         return .release(session: session, staysOpen: staysOpen)
     }
