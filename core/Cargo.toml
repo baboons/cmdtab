@@ -3,6 +3,7 @@ name = "cmdtab-core"
 version = "0.1.0"
 edition = "2024"
 description = "Search, ranking and learning engine for CmdTab"
+license = "MIT"
 publish = false
 
 [lib]

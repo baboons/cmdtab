@@ -25,9 +25,9 @@ enum DemoSnapshot {
     }
 
     private static let samples: [(app: String, path: String, title: String, profile: String?, tint: UInt32)] = [
-        ("Google Chrome", "/Applications/Google Chrome.app", "Pull request #42 · baboons/cmdtab", "Johan (capishe.se)", 0x2F7CF6),
+        ("Google Chrome", "/Applications/Google Chrome.app", "Pull request #42 · baboons/cmdtab", "Work", 0x2F7CF6),
         ("Terminal", "/System/Applications/Utilities/Terminal.app", "~/Projects/cmdtab — cargo test", nil, 0x2B2B2B),
-        ("Google Chrome", "/Applications/Google Chrome.app", "Google Meet", "Johan (walktheroom.com)", 0x1E8E3E),
+        ("Google Chrome", "/Applications/Google Chrome.app", "Google Meet", "Personal", 0x1E8E3E),
         ("Mail", "/System/Applications/Mail.app", "Inbox — 3 unread", nil, 0x3A8DDE),
         ("Notes", "/System/Applications/Notes.app", "Release checklist", nil, 0xF2C94C),
         ("Music", "/System/Applications/Music.app", "Listen Now", nil, 0xFA3C5A),
@@ -68,7 +68,7 @@ enum DemoSnapshot {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             var written: [String] = []
-            if let image = Private.captureWindow(CGWindowID(panel.windowNumber)) {
+            if let image = Private.captureWindow(CGWindowID(panel.windowNumber), bestResolution: true) {
                 write(image, to: out)
                 written.append(out.path)
             }

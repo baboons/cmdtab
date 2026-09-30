@@ -111,12 +111,13 @@ enum Private {
     static var canCaptureWindows: Bool { hwCaptureWindowListFn != nil }
 
     /// Captures a window's backing store, even when covered or on another Space.
-    static func captureWindow(_ id: CGWindowID) -> CGImage? {
+    /// `bestResolution` captures at Retina scale; thumbnails don't need it.
+    static func captureWindow(_ id: CGWindowID, bestResolution: Bool = false) -> CGImage? {
         guard let fn = hwCaptureWindowListFn else { return nil }
         var wid = id
         let ignoreGlobalClipShape: UInt32 = 1 << 11
-        let nominalResolution: UInt32 = 1 << 9
-        guard let images = fn(connection, &wid, 1, ignoreGlobalClipShape | nominalResolution)?.takeRetainedValue() as? [CGImage] else {
+        let resolution: UInt32 = bestResolution ? 1 << 8 : 1 << 9
+        guard let images = fn(connection, &wid, 1, ignoreGlobalClipShape | resolution)?.takeRetainedValue() as? [CGImage] else {
             return nil
         }
         return images.first

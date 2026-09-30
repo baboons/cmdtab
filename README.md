@@ -5,6 +5,8 @@ A fast, elegant ⌘Tab replacement for macOS that switches between **windows** (
 
 Native Swift/AppKit shell, Rust search core.
 
+![CmdTab showing window previews](docs/previews.png)
+
 ## Install
 
 ```sh
@@ -55,6 +57,8 @@ If you prefer AltTab's classic behaviour, where releasing ⌘ always switches, s
 
 ### Search
 
+![Typing "sl" filters to Slack and other matches, with matched letters highlighted](docs/search.png)
+
 - Fuzzy matching, fzf-style: `vsc` → **V**isual **S**tudio **C**ode, `gh` → Git**H**ub. Word starts, camelCase
   and runs of consecutive letters score higher.
 - Several words are ANDed, and each can match the app or the title: `saf hack` → the Safari window titled
@@ -68,6 +72,8 @@ If you prefer AltTab's classic behaviour, where releasing ⌘ always switches, s
   kept separately for each profile.
 - Ties go to the most recently used window. The window you're already in is ranked a bit lower, because
   when you search you usually want somewhere else.
+
+<p align="center"><img src="docs/list.png" width="560" alt="The compact list style, with browser profiles and unread badges"></p>
 
 ### Settings
 
@@ -163,3 +169,7 @@ sample windows into a PNG. It needs no permissions, so it's handy for UI work.
 
 `open -n build/CmdTab.app --args --ax-dump /tmp/ax.txt com.google.Chrome` writes the Accessibility tree of an
 app's windows to a file. It uses CmdTab's own Accessibility permission.
+
+## License
+
+[MIT](LICENSE)

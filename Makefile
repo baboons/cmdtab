@@ -22,7 +22,7 @@ endif
 RUST_SOURCES  := $(shell find core/src -name '*.rs') core/Cargo.toml
 SWIFT_SOURCES := $(shell find Sources -name '*.swift' -o -name '*.modulemap') Package.swift core/include/cmdtab_core.h
 
-.PHONY: all app zip core run install test clean version
+.PHONY: all app zip core run install test clean version screenshots
 
 all: app
 
@@ -60,6 +60,17 @@ zip: app
 
 version:
 	@echo $(VERSION)
+
+# README screenshots: the real panel rendered with sample windows (no personal
+# data, no permissions needed), placed on a desktop-style background.
+screenshots: $(SWIFT_BIN)
+	@mkdir -p docs $(BUILD_DIR)/shots
+	$(SWIFT_BIN) --demo-snapshot $(BUILD_DIR)/shots/previews.png --dark
+	$(SWIFT_BIN) --demo-snapshot $(BUILD_DIR)/shots/search.png --dark --query sl
+	$(SWIFT_BIN) --demo-snapshot $(BUILD_DIR)/shots/list.png --dark --list
+	for shot in previews search list; do \
+		swift scripts/compose-screenshot.swift $(BUILD_DIR)/shots/$$shot.png docs/$$shot.png; \
+	done
 
 run: app
 	-@pkill -x $(APP_NAME) 2>/dev/null; sleep 0.3
