@@ -295,7 +295,9 @@ final class SwitcherView: NSView {
         searchIcon.frame = CGRect(x: l.inset + 12, y: headerMidY - 11, width: 22, height: 22)
         var headerRight = bounds.width - l.inset - 12
         if !clockField.isHidden {
-            let clockWidth = ceil(clockField.intrinsicContentSize.width)
+            // The cell's size, not intrinsicContentSize: that one leaves out the
+            // label's side padding, which clips the last digit.
+            let clockWidth = ceil(clockField.sizeThatFits(bounds.size).width)
             clockField.frame = CGRect(x: headerRight - clockWidth, y: headerMidY - 8, width: clockWidth, height: 16)
             headerRight = clockField.frame.minX - 10
         }
