@@ -117,7 +117,7 @@ final class SwitcherController: SwitcherViewDelegate {
                                          itemCount: candidates.count, screen: screenFrame, hints: settings.showHints)
         self.layout = layout
         view.begin(layout: layout, mode: mode, trigger: settings.trigger,
-                   releaseSwitches: settings.releaseBehavior == .switchWindow)
+                   releaseSwitches: settings.releaseBehavior == .switchWindow, showClock: settings.showClock)
         view.prune(keeping: Set(candidates.map(\.id)))
 
         // Refresh previews for everything that could be on screen, best first.
@@ -164,6 +164,7 @@ final class SwitcherController: SwitcherViewDelegate {
         isVisible = false
         tap.deactivate(session: session)
         panel.orderOut(nil)
+        view.end()
         if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
         outsideClickMonitor = nil
     }

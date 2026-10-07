@@ -73,7 +73,7 @@ protocol SwitcherViewDelegate: AnyObject {
     func switcherView(didRequest action: WindowAction, at index: Int)
 }
 
-/// Header (search field), result grid/list and hint footer.
+/// Header (search field, optional clock), result grid/list and hint footer.
 final class SwitcherView: NSView {
     weak var delegate: SwitcherViewDelegate?
 
@@ -89,6 +89,8 @@ final class SwitcherView: NSView {
     private let searchIcon = NSImageView()
     private let queryField = NSTextField(labelWithString: "")
     private let countField = NSTextField(labelWithString: "")
+    private let clockField = NSTextField(labelWithString: "")
+    private var clockTimer: Timer?
     private let caret = CALayer()
     private let separator = CALayer()
     private let footerField = NSTextField(labelWithString: "")
@@ -115,6 +117,12 @@ final class SwitcherView: NSView {
         countField.alignment = .right
         addSubview(countField)
 
+        clockField.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+        clockField.textColor = .secondaryLabelColor
+        clockField.alignment = .right
+        clockField.isHidden = true
+        addSubview(clockField)
+
         caret.cornerRadius = 1
         layer?.addSublayer(caret)
         layer?.addSublayer(separator)
@@ -139,7 +147,7 @@ final class SwitcherView: NSView {
 
     // MARK: - Session
 
-    func begin(layout: SwitcherLayout, mode: KeyboardTap.Mode, trigger: TriggerModifier, releaseSwitches: Bool) {
+    func begin(layout: SwitcherLayout, mode: KeyboardTap.Mode, trigger: TriggerModifier, releaseSwitches: Bool, showClock: Bool) {
         layoutInfo = layout
         topRow = 0
         hoveredIndex = nil
@@ -148,7 +156,13 @@ final class SwitcherView: NSView {
         visibleCells.removeAll()
         setHints(mode: mode, trigger: trigger, releaseSwitches: releaseSwitches)
         footerField.isHidden = layout.footerHeight < 20
+        clockField.isHidden = !showClock
+        if showClock { startClock() } else { stopClock() }
         updateTrackingAreas()
+    }
+
+    func end() {
+        stopClock()
     }
 
     func update(query: String, results: [SearchResult], selected: Int, animated: Bool) {
@@ -279,8 +293,14 @@ final class SwitcherView: NSView {
         let l = layoutInfo
         let headerMidY = l.inset + l.headerHeight / 2 - 2
         searchIcon.frame = CGRect(x: l.inset + 12, y: headerMidY - 11, width: 22, height: 22)
+        var headerRight = bounds.width - l.inset - 12
+        if !clockField.isHidden {
+            let clockWidth = ceil(clockField.intrinsicContentSize.width)
+            clockField.frame = CGRect(x: headerRight - clockWidth, y: headerMidY - 8, width: clockWidth, height: 16)
+            headerRight = clockField.frame.minX - 10
+        }
         let countWidth: CGFloat = 110
-        countField.frame = CGRect(x: bounds.width - l.inset - 12 - countWidth, y: headerMidY - 8, width: countWidth, height: 16)
+        countField.frame = CGRect(x: headerRight - countWidth, y: headerMidY - 8, width: countWidth, height: 16)
         let queryX = searchIcon.frame.maxX + 10
         queryField.frame = CGRect(x: queryX, y: headerMidY - 13, width: countField.frame.minX - queryX - 12, height: 26)
         positionCaret()
@@ -317,6 +337,31 @@ final class SwitcherView: NSView {
         CATransaction.setDisableActions(true)
         caret.frame = CGRect(x: queryField.frame.minX + textWidth + 2.5, y: queryField.frame.minY + 2, width: 2, height: 22)
         CATransaction.commit()
+    }
+
+    /// Shows the time and keeps it current: the switcher can stay open, so
+    /// the label is refreshed on every minute boundary until the session ends.
+    private func startClock() {
+        stopClock()
+        updateClock()
+        let nextMinute = Calendar.current.nextDate(after: Date(), matching: DateComponents(second: 0), matchingPolicy: .nextTime) ?? Date()
+        let timer = Timer(fire: nextMinute, interval: 60, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updateClock() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        clockTimer = timer
+    }
+
+    private func stopClock() {
+        clockTimer?.invalidate()
+        clockTimer = nil
+    }
+
+    private func updateClock() {
+        // The system's own short time format, as in the menu bar: the region's
+        // pattern plus the 12/24-hour setting from System Settings.
+        clockField.stringValue = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
+        needsLayout = true
     }
 
     private func startCaretBlink() {

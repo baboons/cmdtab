@@ -74,6 +74,7 @@ struct SettingsView: View {
                 }
                 Toggle("Show notification badges", isOn: $settings.showBadges)
                 Toggle("Show keyboard hints", isOn: $settings.showHints)
+                Toggle("Show clock", isOn: $settings.showClock)
             }
 
             Section("Windows") {

@@ -80,7 +80,7 @@ If you prefer AltTab's classic behaviour, where releasing ⌘ always switches, s
 ### Settings
 
 Switcher shortcut (`⌘Tab`, `⌥Tab` or `⌃Tab`), search shortcut, appear delay, previews vs. compact list,
-preview size, which windows to include (minimized, hidden apps, other Spaces, apps without windows),
+preview size, an optional clock, which windows to include (minimized, hidden apps, other Spaces, apps without windows),
 launch at login.
 
 ## Updates

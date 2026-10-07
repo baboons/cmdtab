@@ -92,6 +92,7 @@ final class Settings: ObservableObject {
     @Published var previewSize: PreviewSize { didSet { defaults.set(previewSize.rawValue, forKey: "previewSize") } }
     @Published var showHints: Bool { didSet { defaults.set(showHints, forKey: "showHints") } }
     @Published var showBadges: Bool { didSet { defaults.set(showBadges, forKey: "showBadges") } }
+    @Published var showClock: Bool { didSet { defaults.set(showClock, forKey: "showClock") } }
     @Published var showMinimized: Bool { didSet { defaults.set(showMinimized, forKey: "showMinimized") } }
     @Published var showHiddenApps: Bool { didSet { defaults.set(showHiddenApps, forKey: "showHiddenApps") } }
     @Published var showOtherSpaces: Bool { didSet { defaults.set(showOtherSpaces, forKey: "showOtherSpaces") } }
@@ -120,6 +121,7 @@ final class Settings: ObservableObject {
             "previewSize": PreviewSize.medium.rawValue,
             "showHints": true,
             "showBadges": true,
+            "showClock": false,
             "showMinimized": true,
             "showHiddenApps": true,
             "showOtherSpaces": true,
@@ -135,6 +137,7 @@ final class Settings: ObservableObject {
         previewSize = PreviewSize(rawValue: defaults.string(forKey: "previewSize") ?? "") ?? .medium
         showHints = defaults.bool(forKey: "showHints")
         showBadges = defaults.bool(forKey: "showBadges")
+        showClock = defaults.bool(forKey: "showClock")
         showMinimized = defaults.bool(forKey: "showMinimized")
         showHiddenApps = defaults.bool(forKey: "showHiddenApps")
         showOtherSpaces = defaults.bool(forKey: "showOtherSpaces")

@@ -3,7 +3,7 @@ import AppKit
 /// Development aid: renders the real switcher panel with sample windows and
 /// writes a PNG, without needing any permissions.
 ///
-///   CmdTab --demo-snapshot out.png [--query "sl"] [--list] [--dark|--light] [--select N]
+///   CmdTab --demo-snapshot out.png [--query "sl"] [--list] [--clock] [--dark|--light] [--select N]
 @MainActor
 enum DemoSnapshot {
     private static var panel: SwitcherPanel?
@@ -20,7 +20,8 @@ enum DemoSnapshot {
         let select = value("--select").flatMap(Int.init)
         if args.contains("--dark") { NSApp.appearance = NSAppearance(named: .darkAqua) }
         if args.contains("--light") { NSApp.appearance = NSAppearance(named: .aqua) }
-        DispatchQueue.main.async { render(to: out, query: query, style: style, select: select) }
+        let clock = args.contains("--clock")
+        DispatchQueue.main.async { render(to: out, query: query, style: style, select: select, clock: clock) }
         return true
     }
 
@@ -37,7 +38,7 @@ enum DemoSnapshot {
         ("Slack", "/Applications/Slack.app", "general — Baboons", nil, 0x611F69),
     ]
 
-    private static func render(to out: URL, query: String, style: SwitcherStyle, select: Int?) {
+    private static func render(to out: URL, query: String, style: SwitcherStyle, select: Int?, clock: Bool) {
         let appElement = AXUIElementCreateApplication(getpid())
         var items: [WindowItem] = []
         for (i, s) in samples.enumerated() {
@@ -62,7 +63,7 @@ enum DemoSnapshot {
         self.panel = panel
         let height = layout.height(for: results.count)
         panel.setFrame(CGRect(x: screen.midX - layout.width / 2, y: screen.midY - height / 2, width: layout.width, height: height), display: false)
-        panel.switcherView.begin(layout: layout, mode: query.isEmpty ? .hold : .sticky, trigger: .command, releaseSwitches: false)
+        panel.switcherView.begin(layout: layout, mode: query.isEmpty ? .hold : .sticky, trigger: .command, releaseSwitches: false, showClock: clock)
         panel.switcherView.update(query: query, results: results, selected: select ?? (query.isEmpty ? 1 : 0), animated: false)
         panel.orderFrontRegardless()
 
